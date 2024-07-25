@@ -59,7 +59,7 @@ export const createPostLikeApi = createAsyncThunk(
         try {
             let query = `mutation CreateLike($createLikeId: String!) {
                 createLike(id: $createLikeId) {
-                  like
+                __typename
                 }
               }`
             const res = await graphqlQuery({
@@ -84,7 +84,7 @@ export const destroyPostLikeApi = createAsyncThunk(
         try {
             let query = `mutation DestroyLike($destroyLikeId: String!) {
                 destroyLike(id: $destroyLikeId) {
-                  like
+                __typename
                 }
               }`
             const res = await graphqlQuery({
@@ -146,17 +146,18 @@ export const fetchPostLikesApi = createAsyncThunk(
     }, thunkApi) => {
         try {
             await new Promise(resolve => setTimeout(resolve, 1000))
-            let query = `query FindAllLikes($findAllLikesInput: SearchById!) {
+            let query = `query FindAllLikes($findAllLikesInput: GraphQLPageQuery!) {
                 findAllLikes(findAllLikesInput: $findAllLikesInput) {
-                  username
-                  profilePicture
-                  name
-                  id
                   following
                   followed_by
+                  id
+                  username
                   email
+                  name
+                  profilePicture
                 }
-              }`
+              }
+              `
             const res = await graphqlQuery({
                 query: query,
                 variables: { findAllLikesInput }

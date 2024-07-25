@@ -4,55 +4,56 @@ import Sm_Navigation from '@/components/home/navigation/sm-navigation';
 import Sm_Header from '@/components/home/navigation/sm-header';
 import Lg_Navigation from '@/components/home/navigation/lg-navigation';
 import NotFound from '@/components/home/NotFound';
-import { fetchAccountFeedApi } from '@/redux/services/account';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
-import StatusbarColorInitial from '@/provider/StatusbarColor';
+import { fetchAccountFeedApi } from '@/redux/services/account';
 import { setMoreData } from '@/redux/slice/post';
 import { getRandomPost } from '@/components/sky/random';
-import { debounce } from 'lodash';
+import HomePageLoading from '@/components/home/loading/PageLoading';
+const MemorizeSm_Header = memo(Sm_Header)
+const MemoizedSm_Navigation = memo(Sm_Navigation)
+const MemoizedLg_Navigation = memo(Lg_Navigation)
+let pageLoaded = false
+const _posts = getRandomPost(10)
 
 export default function Page() {
+  const posts = useSelector((Root: RootState) => Root.posts)
   const dispatch = useDispatch()
-  const posts = useSelector((Root: RootState) => Root.post)
-  const loadedRef = useRef(false)
-  const [size, setSize] = useState(160)
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      if (!loadedRef.current) {
-        dispatch(fetchAccountFeedApi() as any)
-        loadedRef.current = true
-      }
+    if (!pageLoaded) {
+      dispatch(fetchAccountFeedApi() as any)
+      pageLoaded = true
     }
-    fetchPosts()
-  }, []);
+  }, [])
 
-  const loadMore = debounce(() => {
-    const _posts = getRandomPost(size)
+  const loadMore = useCallback(() => {
     dispatch(setMoreData(_posts) as any)
-    setSize(size + 10)
-  },2500)
+  }, [])
 
-  if (posts.error) {
-    return <NotFound message={posts.error?.message} />
+  if (posts.feedsLoading || !pageLoaded) {
+    return <HomePageLoading />
   }
 
+  if (posts.feedsError && pageLoaded || !posts.feeds && pageLoaded) {
+    return <NotFound message={posts.feedsError?.message} />
+  }
 
-  return (
-    <>
-      <StatusbarColorInitial />
-      <div className='w-full h-full flex'>
-        <Lg_Navigation />
-        <div className='w-full md:py-0 py-14'>
-          <Sm_Header />
-          <VirtualizePostList posts={posts}
-            loading={posts.loading || !loadedRef.current}
-            loadMore={loadMore} />
-          <Sm_Navigation />
+  if (posts.feeds) {
+    return (
+      <>
+        <div className='w-full h-full flex'>
+          <MemoizedLg_Navigation />
+          <div className='w-full'>
+            <VirtualizePostList
+              Header={<MemorizeSm_Header />}
+              Footer={<MemoizedSm_Navigation />}
+              posts={posts}
+              loadMore={loadMore} />
+          </div>
         </div>
-      </div>
-    </>
-  )
+      </>
+    )
+  }
 }
